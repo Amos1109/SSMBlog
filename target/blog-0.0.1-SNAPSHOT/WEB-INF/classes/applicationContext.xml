@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns:p="http://www.springframework.org/schema/p"
+xmlns:aop="http://www.springframework.org/schema/aop"
+xmlns:context="http://www.springframework.org/schema/context"
+xmlns:jee="http://www.springframework.org/schema/jee"
+xmlns:tx="http://www.springframework.org/schema/tx"
+xsi:schemaLocation="http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd 
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd 
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd 
+http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd 
+http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee.xsd
+http://www.springframework.org/schema/p http://www.springframework.org/schema/p/spring-p.xsd"
+>
+
+<!-- 配置数据源 -->
+<bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource">
+<property name="url" value="jdbc:mysql://121.43.102.125:3306/db_blog?useUnicode=true&amp;characterEncoding=UTF-8&amp;useSSL=false"/>
+<property name="username" value="root"/>
+<property name="password" value="994498"/>
+</bean>
+
+<!-- 配置Mybatis的sqlSessionFactory -->
+<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+<property name="dataSource" ref="dataSource"/>
+<!-- 自动扫描mapper.xml文件 -->
+<property name="mapperLocations" value="classpath:com/hyt/mappers/*.xml"/>
+<!-- Mybatis配置文件 -->
+<property name="configLocation" value="classpath:mybatis-config.xml"/>
+</bean>
+
+<!-- DAO接口所在包名 ：Spring自动扫描包下面的类-->
+<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+<property name="basePackage" value="com.hyt.dao"/>
+<property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+</bean>
+
+<!-- 事务管理 -->
+<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+<property name="dataSource" ref="dataSource"/>
+</bean>
+ <!-- 自定义Realm -->
+ <bean id="myRealm" class="com.hyt.realm.MyRealm"></bean>
+<!-- 安全管理器 -->
+<bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+<property name="realm" ref="myRealm"/>
+</bean>
+<!-- Shiro过滤器 -->
+<bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+<property name="securityManager" ref="securityManager" />
+<property name="loginUrl" value="/login.jsp"/>
+<property name="filterChainDefinitions">
+<value>
+/login=anon
+/admin/**=authc
+</value>
+</property>
+</bean>
+
+<bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor" />
+
+<bean class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator" depends-on="lifecycleBeanPostProcessor"/>
+
+<bean class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">
+<property name="securityManager" ref="securityManager" />
+</bean>
+
+<tx:advice id="txAdvice" transaction-manager="transactionManager">
+<tx:attributes>
+<tx:method name="insert*" propagation="REQUIRED"/>
+<tx:method name="update*" propagation="REQUIRED"/>
+<tx:method name="edit*" propagation="REQUIRED"/>
+<tx:method name="save*" propagation="REQUIRED"/>
+<tx:method name="add*" propagation="REQUIRED"/>
+<tx:method name="new*" propagation="REQUIRED"/>
+<tx:method name="set*" propagation="REQUIRED"/>
+<tx:method name="remove*" propagation="REQUIRED"/>
+<tx:method name="delete*" propagation="REQUIRED"/>
+<tx:method name="change*" propagation="REQUIRED"/>
+<tx:method name="check*" propagation="REQUIRED"/>
+<tx:method name="get*" propagation="REQUIRED" read-only="true"/>
+<tx:method name="find*" propagation="REQUIRED" read-only="true"/>
+<tx:method name="load*" propagation="REQUIRED" read-only="true"/>
+<tx:method name="*" propagation="REQUIRED" read-only="true"/>
+</tx:attributes>
+</tx:advice>
+
+<!-- 配置事务切面 -->
+<aop:config>
+<aop:pointcut expression="execution(* com.hyt.service.*.*(..))" id="serviceOperation"/>
+<aop:advisor advice-ref="txAdvice" pointcut-ref="serviceOperation"/>
+</aop:config>
+
+<!-- 自动扫描 -->
+<context:component-scan base-package="com.hyt.service"></context:component-scan>
+
+
+</beans>
